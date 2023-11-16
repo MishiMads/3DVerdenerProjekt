@@ -7,9 +7,9 @@ public class MrX : MonoBehaviour
 {
     public Transform player;
     private NavMeshAgent agent;
-    public float viewDistance = 10f;
-    public float updateInterval = 2f;
-    public float fieldOfViewAngle = 45f;
+    public float viewDistance;
+    public float updateInterval;
+    public float fieldOfViewAngle;
     public LayerMask obstacleLayer; // Layer for obstacles
     private float lastUpdateTime;
     private Ray debugRay;
