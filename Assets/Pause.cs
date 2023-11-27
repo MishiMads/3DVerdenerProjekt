@@ -9,15 +9,16 @@ using UnityEditor.Rendering;
 using UnityEngine.SceneManagement;
 
 public class Pause : MonoBehaviour
-
 {
-    [SerializeField] private GameObject pauseMenu;
-    [SerializeField] private GameObject pauseButton;
+    public bool gameIsPaused = false;
+    public GameObject pauseScreen;
 
-     public void RestartGame()
+    public void RestartGame()
      {
          SceneManager.LoadScene(SceneManager.GetActiveScene().name); // loads current scene
-         Time.timeScale = 1.0f; 
+         Time.timeScale = 1.0f;
+         Cursor.visible = false;
+         Cursor.lockState = CursorLockMode.Locked;
      } 
      
     public void QuitGame()
@@ -27,21 +28,26 @@ public class Pause : MonoBehaviour
 
    public void MainMenu()
     {
-        SceneManager.LoadScene("Scenes/MainMenu");
+        SceneManager.LoadScene("Scenes/StartScreen");
         Time.timeScale = 1.0f;
     }
    
-   public void PauseButton()
-    {
-        Time.timeScale = 0f;
-        pauseMenu.SetActive(true);
-        pauseButton.SetActive(false);
-    }
-
-    public void ResumeButton()
-    {
-        Time.timeScale = 1.0f;
-        pauseMenu.SetActive(false);
-        pauseButton.SetActive(true);
-    }
+   public void PauseGame()
+   {
+       if (gameIsPaused)
+       {
+           pauseScreen.SetActive(true);
+           Time.timeScale = 0f;
+           Cursor.visible = true;
+           Cursor.lockState = CursorLockMode.None;
+       }
+       else
+       {
+           pauseScreen.SetActive(false);
+           Time.timeScale = 1.0f;
+           Cursor.visible = false;
+           Cursor.lockState = CursorLockMode.Locked;
+       }
+           
+   }
 }

@@ -13,6 +13,10 @@ namespace StarterAssets
 		public bool jump;
 		public bool sprint;
 		public bool use;
+		public bool pause;
+		public Inventory inventory;
+		public Pause pauseMenu;
+
 
 		[Header("Movement Settings")]
 		public bool analogMovement;
@@ -47,7 +51,19 @@ namespace StarterAssets
 		
 		public void OnUse(InputValue value)
 		{
-			UseInput(value.isPressed);
+			if (inventory != null)
+			{
+				UseInput(value.isPressed);
+				//Debug.Log("Yesss");
+				inventory.Interact();
+			}
+		}
+		
+		public void OnPause(InputValue value)
+		{
+			pauseInput(value.isPressed);
+			pauseMenu.PauseGame();
+			pauseMenu.gameIsPaused = !pauseMenu.gameIsPaused;
 			Debug.Log("Yesss");
 		}
 #endif
@@ -86,6 +102,11 @@ namespace StarterAssets
 		public void UseInput(bool newUseState)
 		{
 			use = newUseState;
+		}
+		
+		public void pauseInput(bool newPauseState)
+		{
+			pause = newPauseState;
 		}
 	}
 	

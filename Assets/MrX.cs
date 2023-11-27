@@ -13,12 +13,37 @@ public class MrX : MonoBehaviour
     public LayerMask obstacleLayer; // Layer for obstacles
     private float lastUpdateTime;
     private Ray debugRay;
+    public Animator Animator;
+    public float caughtDistance;
+    public float baseSpeed;
+    public float chaseSpeed;
+    public GameObject deathScreen;
+    private Vector3 lastKnownPlayerPosition;
+    private AudioSource scream;
+
+    [SerializeField] private List<GameObject> punkter;
+    private GameObject currentPoint;
+
+    enum PossibleStates
+    {
+        Chasing,
+        Patrolling,
+        Searching,
+        Idling
+    }
+    
+    PossibleStates currentState;
+    
 
     private void Start()
     {
+        currentState = PossibleStates.Patrolling;
         agent = GetComponent<NavMeshAgent>();
         lastUpdateTime = Time.time;
         player = GameObject.FindGameObjectWithTag("Player").transform;
+        currentPoint = punkter[0];
+        lastKnownPlayerPosition = player.position;
+        scream = GetComponent<AudioSource>();
     }
 
     private void Update()
@@ -27,23 +52,123 @@ public class MrX : MonoBehaviour
         debugRay = new Ray(transform.position, player.position - transform.position);
         Debug.DrawRay(debugRay.origin, debugRay.direction * viewDistance, Color.red); // Draw a red ray in the scene view to show the view distance
         
+        switch (currentState)
+        {
+            case PossibleStates.Patrolling:
+                print("patrolling");
+                patrol();
+                checkForPlayer();
+                break;
+            case PossibleStates.Idling:
+                print("idling");
+                idle();
+                break;
+            case PossibleStates.Chasing:
+                print("chasing");
+                chase();
+                break;
+            case PossibleStates.Searching:
+                print("searching");
+                search();
+                checkForPlayer();
+                break;
+        }
+    }
+    
+    
+    private void PlayMonsterScream()
+    {
+        if (!scream.isPlaying)
+        {
+            scream.Play();
+        }
+    }
+
+    private void checkForPlayer()
+    {
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+
+        if (distanceToPlayer <= viewDistance && IsPlayerInFieldOfView())
+        {
+            currentState = PossibleStates.Chasing;
+            lastKnownPlayerPosition = player.position;
+            PlayMonsterScream();
+        }
+    }
+    
+    private void chase()
+    {
         if (Time.time - lastUpdateTime > updateInterval)
         {
             float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+            print("Stalking player");
+            agent.SetDestination(player.position);
+            Animator.SetBool("Walk", true);
+            agent.speed = chaseSpeed;
 
-            if (distanceToPlayer <= viewDistance && IsPlayerInFieldOfView())
+            if (distanceToPlayer > viewDistance || !IsPlayerInFieldOfView())
             {
-                Debug.Log("Stalking player");
-                agent.SetDestination(player.position);
+                // Player is either out of view distance or not in the field of view
+                lastKnownPlayerPosition = player.position; // Store the last known position
+                currentState = PossibleStates.Searching;
             }
-            else
+            
+            if (distanceToPlayer < caughtDistance)
             {
-                Debug.Log("Not stalking");
-                agent.ResetPath(); // Stop moving towards the player when not stalking
+                //Debug.Log("Caught player");
+                
+                print("You died");
+                deathScreen.SetActive(true);
+                Time.timeScale = 0f;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+
             }
 
             lastUpdateTime = Time.time;
+        }   
+    }
+    
+    private IEnumerator idle()
+    {
+        Animator.SetBool("Walk", false);
+        //Debug.Log("Idling");
+        yield return new WaitForSeconds(2f);
+        // After the delay, set the current waypoint to a random waypoint
+        currentPoint = punkter[Random.Range(0, punkter.Count)];
+        currentState = PossibleStates.Patrolling; // Set the state to Patrolling
+    }
+
+    private void patrol()
+    {
+        // Set the destination to the first waypoint
+        Animator.SetBool("Walk", true);
+        agent.SetDestination(currentPoint.transform.position);
+
+        // Check if the agent is close to the current waypoint
+        if (Vector3.Distance(transform.position, currentPoint.transform.position) < 2f)
+        {
+            StartCoroutine(idle()); // Start the idle coroutine
         }
+    }
+
+    private void search()
+    {
+        agent.speed = baseSpeed;
+
+        if (lastKnownPlayerPosition != Vector3.zero)
+        {
+            // If there's a last known player position, go there
+            agent.SetDestination(lastKnownPlayerPosition);
+        }
+        else
+        {
+            // If there's no last known position, go to a random location within a radius
+            Vector3 randomDirection = Random.insideUnitSphere * 10f;
+            agent.SetDestination(randomDirection + transform.position);
+        }
+
+        StartCoroutine(idle());
     }
 
     private void OnDrawGizmos()
@@ -62,39 +187,44 @@ public class MrX : MonoBehaviour
         Vector3 directionToPlayer = player.position - transform.position;
         float angle = Vector3.Angle(transform.forward, directionToPlayer);
 
-        if (angle <= fieldOfViewAngle * 0.5f)
+        if (angle > fieldOfViewAngle * 0.5f)
         {
-            RaycastHit hitinfo;
-
-            if (Physics.Raycast(transform.position, directionToPlayer, out hitinfo, viewDistance))
-            {
-                if (hitinfo.transform.gameObject.CompareTag("obstacle"))
-                {
-                    // Player is obstructed by an obstacle, so MrX can't see the player
-                    return false;
-                }
-                {
-
-
-                    Debug.Log("Hit object: " + hitinfo.transform.name);
-                    Debug.Log("Hit layer: " + LayerMask.LayerToName(hitinfo.transform.gameObject.layer));
-
-                    if (hitinfo.transform.gameObject.layer == obstacleLayer)
-                    {
-                        // Player is obstructed by an obstacle, so MrX can't see the player
-                        return false;
-                    }
-                }
-
-                // Player is in line of sight and not obstructed by obstacles, so MrX can see the player
-                return true;
-            }
-
-            // Player is not within the field of view angle, so MrX can't see the player
             return false;
         }
-        return false;
+        
+        RaycastHit hitinfo;
+        if (!Physics.Raycast(transform.position, directionToPlayer, out hitinfo, viewDistance))
+        {
+            print("ikke inden for viewdistance"); // Debugging
+            //print(hitinfo.transform.name); // Debugging
+            return false;
+            
+        }
+
+        if (hitinfo.transform.gameObject.CompareTag("obstacle"))
+        {
+            print("rammer obstacle tag"); // Debugging
+            //print(hitinfo.transform.name); // Debugging
+            // Player is obstructed by an obstacle, so MrX can't see the player
+            return false;
+        }
+
+        Debug.Log("Hit object: " + hitinfo.transform.name);
+        if (hitinfo.transform.gameObject.layer == obstacleLayer)
+        {
+            print("rammer obstacle layer"); // Debugging
+            //print(hitinfo.transform.name); // Debugging
+            // Player is obstructed by an obstacle, so MrX can't see the player
+            return false;
+        }
+        
+
+        //Spilleren er ikke bag nogle objekter og er inden for viewDistance
+        //print("ser spiller"); // Debugging
+        //print(hitinfo.transform.name); // Debugging
+        return true;
     }
+    // Lav måske:
     // if (isCrouching == true) viewDistance / 2
     // if (isRunning == true) viewDistance * 2
 }
