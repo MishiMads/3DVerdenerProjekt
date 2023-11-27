@@ -133,10 +133,10 @@ public class MrX : MonoBehaviour
     {
         Animator.SetBool("Walk", false);
         //Debug.Log("Idling");
-        yield return new WaitForSeconds(2f);
         // After the delay, set the current waypoint to a random waypoint
         currentPoint = punkter[Random.Range(0, punkter.Count)];
         currentState = PossibleStates.Patrolling; // Set the state to Patrolling
+        yield return new WaitForSeconds(2f);
     }
 
     private void patrol()
