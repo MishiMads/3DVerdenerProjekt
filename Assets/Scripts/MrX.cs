@@ -5,12 +5,13 @@ using UnityEngine.AI;
 
 public class MrX : MonoBehaviour
 {
+    // A bunch of variables
     public Transform player;
     private NavMeshAgent agent;
     public float viewDistance;
     public float updateInterval;
     public float fieldOfViewAngle;
-    public LayerMask obstacleLayer; // Layer for obstacles
+    public LayerMask obstacleLayer;
     private float lastUpdateTime;
     private Ray debugRay;
     public Animator Animator;
@@ -24,6 +25,7 @@ public class MrX : MonoBehaviour
     [SerializeField] private List<GameObject> punkter;
     private GameObject currentPoint;
 
+    // possible enemy states
     enum PossibleStates
     {
         Chasing,
@@ -31,13 +33,13 @@ public class MrX : MonoBehaviour
         Searching,
         Idling
     }
-    
+    // this variable is used to store the current state of the enemy
     PossibleStates currentState;
     
 
     private void Start()
     {
-        currentState = PossibleStates.Patrolling;
+        currentState = PossibleStates.Patrolling; // Set the current state to Patrolling, since that's what we want the enemy to do at the start
         agent = GetComponent<NavMeshAgent>();
         lastUpdateTime = Time.time;
         player = GameObject.FindGameObjectWithTag("Player").transform;
@@ -49,9 +51,11 @@ public class MrX : MonoBehaviour
     private void Update()
     {
         
+        // Raycast used for debugging
         debugRay = new Ray(transform.position, player.position - transform.position);
         Debug.DrawRay(debugRay.origin, debugRay.direction * viewDistance, Color.red); // Draw a red ray in the scene view to show the view distance
         
+        // Finite state machine
         switch (currentState)
         {
             case PossibleStates.Patrolling:
@@ -84,6 +88,7 @@ public class MrX : MonoBehaviour
         }
     }
 
+    // this method checks if the player is within the view distance and field of view:
     private void checkForPlayer()
     {
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
@@ -96,6 +101,7 @@ public class MrX : MonoBehaviour
         }
     }
     
+    // this method is called when the chase state is triggered and the enemy is chasing the player:
     private void chase()
     {
         if (Time.time - lastUpdateTime > updateInterval)
@@ -104,8 +110,10 @@ public class MrX : MonoBehaviour
             print("Stalking player");
             agent.SetDestination(player.position);
             Animator.SetBool("Walk", true);
-            agent.speed = chaseSpeed;
+            agent.speed = chaseSpeed; // Here, I change the speed of the enemy when chasing the player
+            
 
+            // Check if the player is out of view distance or not in the field of view
             if (distanceToPlayer > viewDistance || !IsPlayerInFieldOfView())
             {
                 // Player is either out of view distance or not in the field of view
@@ -113,6 +121,7 @@ public class MrX : MonoBehaviour
                 currentState = PossibleStates.Searching;
             }
             
+            // Check if the player is close enough to be caught which triggers a game over
             if (distanceToPlayer < caughtDistance)
             {
                 //Debug.Log("Caught player");
@@ -129,16 +138,18 @@ public class MrX : MonoBehaviour
         }   
     }
     
+    // this method is called when the idle state is active which makes the enemy idle for a short period of time:
     private IEnumerator idle()
     {
         Animator.SetBool("Walk", false);
         //Debug.Log("Idling");
-        // After the delay, set the current waypoint to a random waypoint
-        currentPoint = punkter[Random.Range(0, punkter.Count)];
+        currentPoint = punkter[Random.Range(0, punkter.Count)]; // This code selects a random point from the list of points, which the enemy will go to when the patrol state is activated.
         currentState = PossibleStates.Patrolling; // Set the state to Patrolling
         yield return new WaitForSeconds(2f);
     }
 
+    
+    // this method is called when the patrol state is active which makes the enemy patrol between the points:
     private void patrol()
     {
         // Set the destination to the first waypoint
@@ -152,6 +163,7 @@ public class MrX : MonoBehaviour
         }
     }
 
+    // this method is called when the search state is active which makes the enemy search for the player by going to the player's last known position:
     private void search()
     {
         agent.speed = baseSpeed;
@@ -171,6 +183,7 @@ public class MrX : MonoBehaviour
         StartCoroutine(idle());
     }
 
+    // this method was used for debugging:
     private void OnDrawGizmos()
     {
         RaycastHit hitInfo;
@@ -182,6 +195,7 @@ public class MrX : MonoBehaviour
         }
     }
 
+    // this method checks if the player is within a specified field of view:
     private bool IsPlayerInFieldOfView()
     {
         Vector3 directionToPlayer = player.position - transform.position;
@@ -192,6 +206,7 @@ public class MrX : MonoBehaviour
             return false;
         }
         
+        // This condition checks whether the player is within the view distance
         RaycastHit hitinfo;
         if (!Physics.Raycast(transform.position, directionToPlayer, out hitinfo, viewDistance))
         {
@@ -201,6 +216,9 @@ public class MrX : MonoBehaviour
             
         }
 
+        // the following two conditions are similar as they were both employed to check what the best way to check for obstacles was. The first one checks for tags and the second one checks for layers.
+        
+        // This condition checks whether the player is behind an obstacle with the tag "obstacle"
         if (hitinfo.transform.gameObject.CompareTag("obstacle"))
         {
             print("rammer obstacle tag"); // Debugging
@@ -209,6 +227,7 @@ public class MrX : MonoBehaviour
             return false;
         }
 
+        // This condition checks whether the player is behind an obstacle with the layer "obstacle"
         Debug.Log("Hit object: " + hitinfo.transform.name);
         if (hitinfo.transform.gameObject.layer == obstacleLayer)
         {
@@ -219,12 +238,7 @@ public class MrX : MonoBehaviour
         }
         
 
-        //Spilleren er ikke bag nogle objekter og er inden for viewDistance
-        //print("ser spiller"); // Debugging
-        //print(hitinfo.transform.name); // Debugging
+        // If none of the if statements are triggered, the player is within the field of view and can be seen by the enemy.
         return true;
     }
-    // Lav måske:
-    // if (isCrouching == true) viewDistance / 2
-    // if (isRunning == true) viewDistance * 2
 }

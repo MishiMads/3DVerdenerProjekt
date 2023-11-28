@@ -3,6 +3,13 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
+/*
+ This script was imported from the Unity Asset Store.
+- In conjunction with the FirstPersonController.cs script, this script allows the player to move around the scene using the keyboard and mouse. 
+- This script also allows the player to interact with objects in the scene, such as the inventory system and the pause menu, which were modifications I added to the script.
+- In short, this script employs the use of the Unity Input System, which allows the player to move around the scene using the keyboard and mouse, and interact with objects in the scene.
+- The methods are called on specified button presses, such as the spacebar for jumping, the left shift key for sprinting, the E key for interacting with objects, and the ESC or P key for pausing the game.
+*/
 namespace StarterAssets
 {
 	public class StarterAssetsInputs : MonoBehaviour

@@ -8,6 +8,8 @@ using Unity.VisualScripting;
 using UnityEditor.Rendering;
 using UnityEngine.SceneManagement;
 
+// This script allows the player to pause the game, and restart or quit the game from the pause menu.
+
 public class Pause : MonoBehaviour
 {
     public bool gameIsPaused = false;

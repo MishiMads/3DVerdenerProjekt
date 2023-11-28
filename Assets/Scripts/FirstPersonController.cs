@@ -3,6 +3,8 @@
 using UnityEngine.InputSystem;
 #endif
 
+//this is the script that controls the player movement, which was imported from the Unity Asset Store.
+
 namespace StarterAssets
 {
 	[RequireComponent(typeof(CharacterController))]
